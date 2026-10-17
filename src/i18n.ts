@@ -20,8 +20,8 @@ const EN = {
     'modal.create': 'Create',
     'modal.save': 'Save',
     'modal.actions': 'Group actions',
-    'modal.closeTabs': 'Close tabs',
-    'modal.closeTabsTip': 'Close all tabs in the group and delete the group.',
+    'modal.closeGroup': 'Close group',
+    'modal.closeGroupTip': 'Close all tabs in the group and delete the group.',
     'modal.deleteGroup': 'Delete group',
     'modal.deleteGroupTip': 'Keep the tabs open as regular tabs and delete the group.',
     'modal.ungroup': 'Ungroup',
@@ -30,6 +30,13 @@ const EN = {
     'settings.language': 'Language',
     'settings.languageDesc': 'Language of the tab menu and group windows. Auto follows the Obsidian language.',
     'settings.languageAuto': 'Auto (Obsidian language)',
+    'settings.groups': 'Tab groups',
+    'settings.groupsDesc': 'Groups are kept even when none of their tabs are open, so you can add tabs to them again from the tab menu. Delete the ones you no longer need.',
+    'settings.noGroups': 'No groups yet. Right-click a tab and select "Create tab group".',
+    'settings.openTabs': '{count} open tabs',
+    'settings.delete': 'Delete',
+    'settings.deleteTip': 'Delete the group. Its tabs stay open as regular tabs.',
+    'group.unnamed': 'Unnamed group',
 };
 
 type StringKey = keyof typeof EN;
@@ -47,8 +54,8 @@ const KO: Record<StringKey, string> = {
     'modal.create': '만들기',
     'modal.save': '저장',
     'modal.actions': '그룹 작업',
-    'modal.closeTabs': '탭 닫기',
-    'modal.closeTabsTip': '그룹의 탭을 모두 닫고 그룹도 삭제합니다.',
+    'modal.closeGroup': '그룹 닫기',
+    'modal.closeGroupTip': '그룹의 탭을 모두 닫고 그룹도 삭제합니다.',
     'modal.deleteGroup': '그룹 삭제',
     'modal.deleteGroupTip': '탭은 일반 탭으로 남기고 그룹을 삭제합니다.',
     'modal.ungroup': '그룹 해제',
@@ -56,6 +63,13 @@ const KO: Record<StringKey, string> = {
     'settings.language': '언어',
     'settings.languageDesc': '탭 메뉴와 그룹 창의 언어입니다. 자동은 옵시디언 언어를 따릅니다.',
     'settings.languageAuto': '자동 (옵시디언 언어)',
+    'settings.groups': '탭 그룹',
+    'settings.groupsDesc': '열린 탭이 없어도 그룹은 남아 있어서, 탭 메뉴에서 다시 탭을 넣을 수 있습니다. 더 쓰지 않는 그룹은 여기서 지우세요.',
+    'settings.noGroups': '아직 그룹이 없습니다. 탭을 우클릭해 "새 탭 그룹 만들기"를 선택하세요.',
+    'settings.openTabs': '열린 탭 {count}개',
+    'settings.delete': '삭제',
+    'settings.deleteTip': '그룹을 삭제합니다. 탭은 일반 탭으로 남습니다.',
+    'group.unnamed': '이름 없는 그룹',
 };
 
 const STRINGS: Record<Language, Record<StringKey, string>> = { en: EN, ko: KO };
