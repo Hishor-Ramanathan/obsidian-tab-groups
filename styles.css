@@ -11,11 +11,14 @@ html body .tab-group-label {
     align-items: center;
     justify-content: center;
     padding: 2px 10px;
-    margin: 4px 2px;
+    /* 왼쪽은 탭 곡선 너비만큼 띄워, 바로 앞 탭이 선택돼도 그 탭의 아래 곡선이 라벨 뒤로 가려지지 않게 함
+       (오른쪽은 좁게 두어 라벨이 자기 그룹 쪽에 붙어 보임) */
+    margin: 4px 2px 4px var(--tab-curve, 10px);
     border-radius: 6px;
     font-size: 11px;
     font-weight: 600;
-    color: var(--text-normal);
+    /* 글자색: 그룹 색에 맞춰 흰색·검은색 중 대비가 큰 쪽 (코드에서 계산) */
+    color: var(--tab-group-on-color, var(--text-normal));
     cursor: pointer;
     transition: all 0.2s;
     user-select: none;
@@ -40,11 +43,174 @@ html body .tab-group-label:hover {
     opacity: 0.8;
 }
 
-/* 그룹에 속한 탭: 위쪽 색 줄과 옅은 배경 (색은 --tab-group-color / --tab-group-tint) */
+/* ✨ 그룹 표시 모양: 밑줄 (기본) — 크롬처럼 라벨은 작은 알약, 라벨 아래부터 그룹 탭 끝까지 색 밑줄이 이어짐
+   (설정에서 클래식을 고르면 body에 .tab-groups-style-classic이 붙고, 그때는 아래 클래식 규칙을 씀)
+   라벨(바깥)은 탭 바 높이를 채워 밑줄을 그리고, 안쪽 .tab-group-label-text가 알약 모양입니다. */
+html body:not(.tab-groups-style-classic) .tab-group-label {
+    position: relative;
+    align-self: stretch;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    /* 위·아래 여백은 탭 헤더와 같게 해서 알약이 탭 글자와 같은 높이에 오게 함.
+       오른쪽은 탭 곡선 너비만큼 비워, 첫 탭이 선택돼도 곡선이 알약을 덮지 않게 함 */
+    padding: 1px var(--tab-curve, 10px) 4px 6px;
+    background-color: transparent;
+}
+
+html body:not(.tab-groups-style-classic) .tab-group-label:hover {
+    opacity: 1;
+}
+
+html body:not(.tab-groups-style-classic) .tab-group-label-text {
+    /* 모양은 클래식 라벨과 같은 비율(이름이 없거나 한 글자면 정사각형)이되,
+       아래 밑줄까지 공간을 차지하므로 조금 작게 */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 22px;
+    min-width: 22px;
+    padding: 0 8px;
+    border-radius: 6px;
+    background-color: var(--tab-group-color);
+    color: var(--tab-group-on-color, #fff); /* 그룹 색에 맞춰 흰색·검은색 중 잘 보이는 쪽 (코드에서 계산) */
+    transition: filter 0.15s;
+}
+
+html body:not(.tab-groups-style-classic) .tab-group-label:hover .tab-group-label-text {
+    filter: brightness(1.1);
+}
+
+/* 라벨 아래 밑줄: 알약 왼쪽 끝에서 시작해 첫 탭으로 이어짐 (접힌 그룹은 알약만) */
+html body:not(.tab-groups-style-classic) .tab-group-label:not(.is-collapsed)::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    border-radius: 1px 0 0 1px;
+    background-color: var(--tab-group-color);
+    pointer-events: none;
+}
+
+/* 💡 그룹 색 줄은 탭 안쪽 요소의 ::before로 그려 탭 헤더(position: relative) 기준으로 붙입니다.
+   탭 헤더 자체의 테두리·그림자로 그리면 선택된 탭의 둥근 모서리(헤더의 ::before·::after)에 가려집니다. */
+html body .workspace-tab-header.tab-group-member:not(#tab-groups) .workspace-tab-header-inner::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    background-color: var(--tab-group-color);
+    pointer-events: none;
+}
+
+html body:not(.tab-groups-style-classic) .workspace-tab-header.tab-group-member:not(#tab-groups) .workspace-tab-header-inner::before {
+    bottom: 0;
+    height: 2px;
+}
+
+/* 그룹 끝은 둥글게 */
+html body:not(.tab-groups-style-classic) .workspace-tab-header.tab-group-member.tab-group-last:not(#tab-groups) .workspace-tab-header-inner::before {
+    border-radius: 0 1px 1px 0;
+}
+
+/* 💡 선택된 탭(그룹 안이든 밖이든) 바로 옆에서는 밑줄을 탭 곡선 너비만큼 줄여,
+   선택된 탭 아래 곡선과 겹치지 않고 곡선 끝에서 자연스럽게 이어지게 함 */
+html body:not(.tab-groups-style-classic) .workspace-tab-header.tab-group-member:has(+ .workspace-tab-header.is-active):not(#tab-groups) .workspace-tab-header-inner::before,
+html body:not(.tab-groups-style-classic) .tab-group-label:has(+ .workspace-tab-header.is-active)::after {
+    right: var(--tab-curve, 10px);
+}
+
+html body:not(.tab-groups-style-classic) .workspace-tab-header.is-active + .workspace-tab-header.tab-group-member:not(#tab-groups) .workspace-tab-header-inner::before {
+    left: var(--tab-curve, 10px);
+}
+
+/* 🎯 밑줄 모양에서 선택된 그룹 탭: 크롬처럼 그룹 색 테두리가 탭 모양(위·양옆·아래 곡선)을 감싸고,
+   양옆 그룹 탭의 밑줄과 이어집니다. 옵시디언은 선택된 탭 테두리와 아래 곡선을
+   --tab-outline-color / --tab-outline-width로 그리므로 그 탭에서만 바꿔 줍니다.
+   (선택된 탭 아래는 편집 화면과 이어지므로 밑줄은 그리지 않음) */
+html body:not(.tab-groups-style-classic) .workspace-tab-header.tab-group-member.is-active:not(#tab-groups) {
+    --tab-outline-color: var(--tab-group-color);
+    --tab-outline-width: 2px;
+    /* 💡 탭 바는 넘치는 부분을 잘라 내고 탭 위쪽 여유는 1px뿐이라, 2px 테두리를 바깥으로만 그리면 위쪽이 잘립니다.
+       바깥 1px + 안쪽 1px(위·양옆)로 나눠 그려 두께는 2px 그대로 두고 잘리지 않게 함 (아래는 편집 화면과 이어지므로 비움) */
+    box-shadow:
+        0 0 0 1px var(--tab-group-color),
+        inset 0 1px 0 var(--tab-group-color),
+        inset 1px 0 0 var(--tab-group-color),
+        inset -1px 0 0 var(--tab-group-color);
+}
+
+html body:not(.tab-groups-style-classic) .workspace-tab-header.tab-group-member.is-active:not(#tab-groups) .workspace-tab-header-inner::before {
+    display: none;
+}
+
+/* ✨ 그룹 표시 모양: 클래식 — 그룹 탭 위쪽 색 줄과 옅은 배경 (색은 --tab-group-color / --tab-group-tint) */
 /* (선택·호버된 탭의 옵시디언 배경보다 우선) */
-html body .workspace-tab-header.tab-group-member:not(#tab-groups) {
+/* 💡 배경은 탭 바 색에 그룹 색을 10% 섞은 불투명한 색. (반투명이면 옆 선택된 탭의 아래 곡선이 비쳐 그룹 끝이 덮여 보임) */
+html body.tab-groups-style-classic .workspace-tab-header.tab-group-member:not(.is-active):not(#tab-groups) {
+    background-color: color-mix(in srgb, var(--tab-group-color) 10%, var(--tab-container-background, var(--background-secondary)));
+}
+
+/* 💡 선택된 탭은 옵시디언이 배경과 양옆 아래 곡선을 모두 --tab-background-active로 그립니다.
+   그 변수를 그룹 색이 섞인 색으로 바꿔, 곡선이 기본 배경색으로 탭 양 끝을 덮지 않게 합니다.
+   (같은 요소에서 자기 자신을 참조할 수 없어서, 원래 값은 탭 바에서 미리 받아 둠) */
+html body.tab-groups-style-classic .workspace-tab-header-container-inner {
+    --tab-group-active-base: var(--tab-background-active);
+}
+
+html body.tab-groups-style-classic .workspace-tab-header.tab-group-member.is-active:not(#tab-groups) {
+    --tab-background-active: color-mix(in srgb, var(--tab-group-color) 10%, var(--tab-group-active-base));
+}
+
+/* 💡 위쪽 색 줄은 탭 크기만 한 상자의 위 테두리로 그려, 그룹 바깥 모서리에서 탭 곡선을 그대로 따라가게 함 */
+html body.tab-groups-style-classic .workspace-tab-header.tab-group-member:not(#tab-groups) .workspace-tab-header-inner::before {
+    top: 0;
+    bottom: 0;
+    background-color: transparent;
     border-top: 3px solid var(--tab-group-color);
-    background-color: var(--tab-group-tint);
+}
+
+/* 💡 그룹 탭들을 한 덩어리로: 탭마다 둥근 위 모서리를 없애 탭 사이가 패이지 않게 하고,
+   옆에 있는 선택된 탭의 아래 곡선(z-index 1)이 그룹 탭 끝을 덮지 않게 그룹 탭을 위로 올림 */
+html body.tab-groups-style-classic .workspace-tab-header.tab-group-member:not(#tab-groups) {
+    border-radius: 0;
+    z-index: 2;
+}
+
+html body.tab-groups-style-classic .workspace-tab-header.tab-group-member.is-active:not(#tab-groups) {
+    z-index: 3;
+}
+
+/* 💡 탭 사이 구분선(탭 안쪽 요소의 ::after)은 탭 오른쪽 끝에서 다음 탭으로 반 픽셀 걸쳐 있어,
+   불투명한 다음 그룹 탭에 가려집니다. 그룹 탭에서는 구분선을 자기 탭 안쪽 끝으로 들임 */
+html body.tab-groups-style-classic .workspace-tab-header.tab-group-member:not(#tab-groups) .workspace-tab-header-inner::after {
+    right: 0;
+}
+
+/* 그룹 바깥 모서리(첫 탭 왼쪽, 마지막 탭 오른쪽)만 옵시디언 탭처럼 둥글게.
+   💡 옵시디언 탭 모서리 값(--tab-radius-active, 기본 10px 10px 0 0)을 그대로 쓰고 안쪽 모서리만 0으로 바꿔,
+   테마가 탭 곡률을 바꿔도 같은 곡률을 따라감 (탭이 하나뿐인 그룹은 양쪽 모두 둥글게) */
+html body.tab-groups-style-classic .workspace-tab-header.tab-group-member.tab-group-first:not(#tab-groups),
+html body.tab-groups-style-classic .workspace-tab-header.tab-group-member.tab-group-first:not(#tab-groups) .workspace-tab-header-inner::before,
+html body.tab-groups-style-classic .workspace-tab-header.tab-group-member.tab-group-last:not(#tab-groups),
+html body.tab-groups-style-classic .workspace-tab-header.tab-group-member.tab-group-last:not(#tab-groups) .workspace-tab-header-inner::before {
+    border-radius: var(--tab-radius-active, 10px 10px 0 0);
+}
+
+html body.tab-groups-style-classic .workspace-tab-header.tab-group-member.tab-group-first:not(.tab-group-last):not(#tab-groups),
+html body.tab-groups-style-classic .workspace-tab-header.tab-group-member.tab-group-first:not(.tab-group-last):not(#tab-groups) .workspace-tab-header-inner::before {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+html body.tab-groups-style-classic .workspace-tab-header.tab-group-member.tab-group-last:not(.tab-group-first):not(#tab-groups),
+html body.tab-groups-style-classic .workspace-tab-header.tab-group-member.tab-group-last:not(.tab-group-first):not(#tab-groups) .workspace-tab-header-inner::before {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
 }
 
 /* 접힌 그룹의 탭 숨김 (선택된 탭이어도 숨김) */
