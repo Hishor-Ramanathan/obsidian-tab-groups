@@ -17,10 +17,13 @@ export interface TabGroupsSettings {
 	language: LanguageSetting;
 	// 💡 그룹 표시 모양 (underline: 그룹 탭 아래 색 밑줄, classic: 위쪽 색 줄과 옅은 배경)
 	groupStyle: GroupStyle;
+	// 💡 그룹에 속한 탭을 고정해 노트가 바뀌지 않게 할지
+	lockGroupedTabs: boolean;
 }
 
 export const DEFAULT_SETTINGS: TabGroupsSettings = {
 	savedGroups: [],
 	language: 'auto',
 	groupStyle: 'underline',
+	lockGroupedTabs: false,
 };

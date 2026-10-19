@@ -24,6 +24,8 @@
     "settings.groupStyleDesc": "How groups appear in the tab bar.",
     "settings.groupStyleUnderline": "Underline",
     "settings.groupStyleClassic": "Classic",
+    "settings.lockGroupedTabs": "Lock grouped tabs",
+    "settings.lockGroupedTabsDesc": "Pin the tabs in a group so their note does not change. A link opened from a grouped tab opens in a new tab outside the group; add it to the group from the tab menu to keep it. Tabs you pinned yourself stay pinned.",
     "settings.groups": "Tab groups",
     "settings.groupsDesc": "Groups are kept even when none of their tabs are open, so you can add tabs to them again from the tab menu. Delete the ones you no longer need.",
     "settings.noGroups": "No groups yet. Right-click a tab and select \"Create tab group\".",

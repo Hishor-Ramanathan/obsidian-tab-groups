@@ -28,6 +28,11 @@ export class TabGroupsSettingTab extends PluginSettingTab {
                 control: { type: 'dropdown', key: 'groupStyle', options: this.groupStyleOptions() },
             },
             {
+                name: t('settings.lockGroupedTabs'),
+                desc: t('settings.lockGroupedTabsDesc'),
+                control: { type: 'toggle', key: 'lockGroupedTabs' },
+            },
+            {
                 type: 'list',
                 heading: t('settings.groups'),
                 emptyState: t('settings.noGroups'),
@@ -48,6 +53,7 @@ export class TabGroupsSettingTab extends PluginSettingTab {
     async setControlValue(key: string, value: unknown) {
         if (key === 'language') await this.changeLanguage(value as LanguageSetting);
         if (key === 'groupStyle') await this.changeGroupStyle(value as GroupStyle);
+        if (key === 'lockGroupedTabs') await this.changeLockGroupedTabs(value as boolean);
     }
 
     // 💡 옵시디언 1.13 미만용
@@ -70,6 +76,13 @@ export class TabGroupsSettingTab extends PluginSettingTab {
                 .addOptions(this.groupStyleOptions())
                 .setValue(this.plugin.settings.groupStyle)
                 .onChange(value => { void this.changeGroupStyle(value as GroupStyle); }));
+
+        new Setting(containerEl)
+            .setName(t('settings.lockGroupedTabs'))
+            .setDesc(t('settings.lockGroupedTabsDesc'))
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.lockGroupedTabs)
+                .onChange(value => { void this.changeLockGroupedTabs(value); }));
 
         this.displayGroups(containerEl);
     }
@@ -135,6 +148,12 @@ export class TabGroupsSettingTab extends PluginSettingTab {
     async changeGroupStyle(style: GroupStyle) {
         this.plugin.settings.groupStyle = style;
         this.plugin.applyGroupStyle();
+        await this.plugin.saveSettings();
+    }
+
+    async changeLockGroupedTabs(enabled: boolean) {
+        this.plugin.settings.lockGroupedTabs = enabled;
+        this.plugin.lock.sync(); // 💡 켜면 지금 그룹 탭을 고정, 끄면 우리가 고정한 탭을 풀어 줌
         await this.plugin.saveSettings();
     }
 

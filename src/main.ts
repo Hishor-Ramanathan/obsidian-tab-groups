@@ -5,6 +5,7 @@ import { GroupDragController } from './group-drag';
 import { GroupDropHandler } from './group-drop';
 import { GroupLabels } from './group-labels';
 import { GroupLayout } from './group-layout';
+import { GroupLock } from './group-lock';
 import { TabMoveTracker } from './tab-move';
 import { registerHiddenTabSkip } from './hidden-tab-skip';
 import { registerHiddenTabActivation } from './hidden-tab-activate';
@@ -44,6 +45,9 @@ export default class TabGroupsPlugin extends Plugin {
     // ✨ 탭 바 정렬과 감시자 담당
     layout: GroupLayout = new GroupLayout(this);
 
+    // ✨ 그룹 탭 잠금(고정) 담당
+    lock: GroupLock = new GroupLock(this);
+
     // ✨ 단축키·다른 플러그인으로 탭을 옮겼을 때의 그룹 편입·이탈 담당
     tabMoves: TabMoveTracker = new TabMoveTracker(this);
 
@@ -63,6 +67,7 @@ export default class TabGroupsPlugin extends Plugin {
             if (this.unloaded) return;
             this.applyGroupStyle();
             this.restoreTabsFromSettings(); // ✨ 탭 매핑 먼저 완벽하게 복구하고!
+            this.lock.adoptExisting();
             this.layout.setupObservers();   // 감시자 달고
             this.enforcePhysicalSorting();  // 화면 정렬!
         });
@@ -149,6 +154,7 @@ export default class TabGroupsPlugin extends Plugin {
     // 💡 탭 바를 다시 정리합니다. (여러 모듈이 그룹을 바꾼 뒤 부름. 실제 작업은 group-layout.ts)
     enforcePhysicalSorting(options: { trackMoves?: boolean } = {}) {
         this.layout.enforcePhysicalSorting(options);
+        this.lock.sync();
     }
 
     // 💡 그룹 표시 모양을 메인 창과 열린 팝업 창 모두에 적용합니다. (style이 null이면 걷어 냄)
@@ -214,6 +220,7 @@ export default class TabGroupsPlugin extends Plugin {
     onunload() {
         this.unloaded = true;
 
+        this.lock.releaseAll();
         this.tabDrag.unload();
         this.groupDrag.finish();
         this.layout.disconnectObservers();
