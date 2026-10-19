@@ -3,7 +3,8 @@ import type TabGroupsPlugin from './main';
 import type { TabGroupData } from './main';
 import { setGroupColor } from './group-style';
 import { internal } from './internal';
-import { EditGroupModal, GroupAction } from './ui/group-modals';
+import { GroupAction } from './ui/group-modals';
+import { confirmDeleteGroup, openEditGroup } from './group-actions';
 
 // ✨ 그룹 라벨: 그룹 맨 앞 탭 앞에 그리고, 클릭하면 접기·펼치기, 우클릭하면 관리 창, 끌면 그룹 통째로 옮기기.
 export class GroupLabels {
@@ -18,6 +19,10 @@ export class GroupLabels {
     register() {
         // 💡 새로 누르기 시작하면 드래그 뒤 클릭 무시 표시를 지웁니다. (드롭으로 끝나 클릭이 오지 않은 경우)
         this.plugin.registerDomEvent(window, 'mousedown', () => { this.ignoreNextLabelClick = false; }, { capture: true });
+        // 💡 탭을 고르면 선택된 탭 바로 앞 표시도 옮깁니다. (탭을 고르는 것만으로는 탭 바 정리가 돌지 않음)
+        this.plugin.registerEvent(this.plugin.app.workspace.on('active-leaf-change', () => {
+            this.plugin.tabContainers().forEach(container => markBeforeActive(container));
+        }));
     }
 
     render() {
@@ -56,12 +61,17 @@ export class GroupLabels {
                     header.classList.toggle('tab-group-last', i === groupHeaders.length - 1);
                 });
             });
+
+            markBeforeActive(container);
         });
     }
 
     // 💡 플러그인을 끌 때 라벨을 모두 치웁니다.
     removeAll() {
-        this.plugin.tabContainers().forEach(container => container.querySelectorAll('.tab-group-label').forEach(el => el.remove()));
+        this.plugin.tabContainers().forEach(container => {
+            container.querySelectorAll('.tab-group-label').forEach(el => el.remove());
+            container.querySelectorAll('.tab-group-before-active').forEach(el => el.removeClass('tab-group-before-active'));
+        });
     }
 
     async toggleCollapsed(groupId: string, groupData: TabGroupData) {
@@ -92,27 +102,15 @@ export class GroupLabels {
         await new Promise(resolve => window.setTimeout(resolve, 20));
     }
 
-    // ✨ 관리 창의 3가지 액션(닫기, 삭제, 해제)
+    // ✨ 관리 창의 3가지 액션 (크롬과 같은 뜻)
+    // - 숨기기: 탭을 닫고 그룹은 남김 → 설정·명령어에서 다시 열기
+    // - 해제: 탭은 일반 탭으로 남기고 그룹을 지움
+    // - 삭제: 확인 뒤 탭을 닫고 그룹도 지움
     async applyAction(groupId: string, action: GroupAction) {
         const plugin = this.plugin;
-        if (action === 'close') {
-            // [그룹 닫기]: 그룹에 속한 탭을 '실제로 모두 닫고', 그룹도 삭제
-            // (주의: 반복문 도중 탭을 닫으면 트리가 꼬이므로 배열에 모아두었다가 한 번에 닫음)
-            plugin.groupLeaves(groupId).forEach(leaf => leaf.detach()); // 네이티브 탭 닫기 명령
-            plugin.groups.delete(groupId);
-        }
-        else if (action === 'delete') {
-            // [그룹 삭제]: 탭을 일반 탭으로 풀고, 그룹 데이터도 완전히 삭제
-            await plugin.deleteGroup(groupId);
-            return;
-        }
-        else if (action === 'ungroup') {
-            // [그룹 해제]: 탭만 일반 탭으로 풀고, 그룹 데이터는 유지
-            plugin.groupLeaves(groupId).forEach(leaf => plugin.leafGroupMap.delete(leaf));
-        }
-
-        await plugin.saveSettings();
-        plugin.enforcePhysicalSorting();
+        if (action === 'hide') await plugin.hideGroup(groupId);
+        else if (action === 'ungroup') await plugin.ungroupGroup(groupId);
+        else confirmDeleteGroup(plugin, groupId);
     }
 
     insertStandaloneLabel(leaderEl: HTMLElement, groupId: string, groupData: TabGroupData) {
@@ -136,20 +134,7 @@ export class GroupLabels {
         labelEl.addEventListener('contextmenu', (e: MouseEvent) => {
             e.preventDefault(); // 기본 브라우저 우클릭 메뉴 차단
 
-            new EditGroupModal(
-                plugin.app,
-                groupData.name,
-                groupData.color,
-                // 1. 저장(onSubmit) 콜백
-                async (newName, newColor) => {
-                    groupData.name = newName;
-                    groupData.color = newColor;
-                    await plugin.saveSettings();
-                    plugin.enforcePhysicalSorting();
-                },
-                // 2. 액션(onAction) 콜백 - 닫기, 삭제, 해제 통합 처리
-                (action) => this.applyAction(groupId, action)
-            ).open();
+            openEditGroup(plugin, groupId);
         });
 
         labelEl.draggable = true;
@@ -177,4 +162,11 @@ export class GroupLabels {
         // 리더 탭 앞에 삽입
         container.insertBefore(labelEl, leaderEl);
     }
+}
+
+// 💡 선택된 탭 바로 앞 요소(탭이나 라벨)에 표시를 붙입니다. 밑줄 모양에서 그 요소의 밑줄을
+// 선택된 탭 곡선 앞에서 끊는 데 씁니다. (CSS :has()는 다시 그리는 범위가 넓어 커뮤니티 검토에서 경고가 나와 대신 씀)
+function markBeforeActive(container: HTMLElement) {
+    const before = container.querySelector<HTMLElement>(':scope > .workspace-tab-header.is-active')?.previousElementSibling ?? null;
+    Array.from(container.children).forEach(el => el.toggleClass('tab-group-before-active', el === before));
 }
