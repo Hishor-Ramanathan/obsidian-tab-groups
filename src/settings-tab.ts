@@ -153,7 +153,6 @@ export class TabGroupsSettingTab extends PluginSettingTab {
 
     async changeLockGroupedTabs(enabled: boolean) {
         this.plugin.settings.lockGroupedTabs = enabled;
-        this.plugin.lock.sync(); // 💡 켜면 지금 그룹 탭을 고정, 끄면 우리가 고정한 탭을 풀어 줌
         await this.plugin.saveSettings();
     }
 

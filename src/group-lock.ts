@@ -1,45 +1,45 @@
-import { WorkspaceLeaf } from 'obsidian';
+import { Workspace, WorkspaceLeaf } from 'obsidian';
 import type TabGroupsPlugin from './main';
 
-// ✨ "그룹 탭 잠금": 그룹에 속한 탭을 고정(pin)해 노트가 바뀌지 않게 합니다.
-// 고정된 탭에서 링크를 열면 옵시디언이 새 탭(그룹 밖)에 열어 줍니다. 그 탭을 그룹에 넣으면 그 탭도 잠깁니다.
-// 💡 이 플러그인이 고정한 탭만 기억해, 사용자가 직접 고정한 탭은 그룹에서 빠져도 그대로 둡니다.
+// ✨ "그룹 탭 잠금": 그룹에 속한 탭의 노트가 바뀌지 않게 합니다.
+// 링크·탐색기·빠른 전환기가 "지금 탭에 열기"를 요청하면 새 탭을 대신 엽니다. 새 탭은 그룹 밖이고,
+// 탭 메뉴로 그룹에 넣으면 그 탭도 잠깁니다.
+// 💡 탭을 고정(pin)하지 않습니다. 고정하면 다른 플러그인이 고정 탭을 한쪽 끝으로 옮겨 그룹이 깨집니다.
+type GetLeaf = Workspace['getLeaf'];
+
 export class GroupLock {
-    private lockedLeaves = new WeakSet<WorkspaceLeaf>();
+    private originalGetLeaf: GetLeaf | null = null;
 
     constructor(private plugin: TabGroupsPlugin) {}
 
-    // 💡 그룹이나 설정이 바뀔 때마다 부릅니다. 그룹에 속한 탭은 고정하고, 그룹에서 빠진 탭은 (우리가 고정했던 것만) 풉니다.
-    sync() {
-        this.plugin.app.workspace.iterateAllLeaves(leaf => {
-            const shouldLock = this.plugin.settings.lockGroupedTabs && this.plugin.leafGroupMap.has(leaf);
-            if (shouldLock) this.lock(leaf);
-            else this.unlock(leaf);
-        });
+    // 💡 workspace.getLeaf를 감쌉니다. 끌 때(unload) 원래대로 되돌립니다.
+    register() {
+        const workspace = this.plugin.app.workspace;
+        // 💡 메서드를 떼어 내 보관하고 workspace를 receiver로 직접 넘겨 부르므로 안전합니다. (끌 때 그대로 복원)
+        // eslint-disable-next-line @typescript-eslint/unbound-method -- called later with workspace as receiver, and restored as-is on unload
+        const original = workspace.getLeaf;
+        this.originalGetLeaf = original;
+
+        const wrapped = (newLeaf?: unknown, direction?: unknown) => {
+            const reuseCurrentTab = newLeaf === undefined || newLeaf === false;
+            const target = reuseCurrentTab && this.currentTabIsLocked(workspace) ? 'tab' : newLeaf;
+            return (original as (...args: unknown[]) => WorkspaceLeaf).call(workspace, target, direction);
+        };
+        workspace.getLeaf = wrapped;
+
+        this.plugin.register(() => this.release());
     }
 
-    // 💡 설정을 끄거나 플러그인을 끌 때: 우리가 고정한 탭을 모두 풉니다.
-    releaseAll() {
-        this.plugin.app.workspace.iterateAllLeaves(leaf => this.unlock(leaf));
+    release() {
+        if (!this.originalGetLeaf) return;
+        this.plugin.app.workspace.getLeaf = this.originalGetLeaf;
+        this.originalGetLeaf = null;
     }
 
-    // 💡 재시작 후 이미 고정된 그룹 탭은 이 플러그인이 고정한 것으로 보고 이어받습니다. (고정 상태는 옵시디언이 저장함)
-    adoptExisting() {
-        if (!this.plugin.settings.lockGroupedTabs) return;
-        this.plugin.app.workspace.iterateAllLeaves(leaf => {
-            if (this.plugin.leafGroupMap.has(leaf) && leaf.getViewState().pinned) this.lockedLeaves.add(leaf);
-        });
-    }
-
-    private lock(leaf: WorkspaceLeaf) {
-        if (leaf.getViewState().pinned) return; // 이미 고정됨 (직접 고정한 탭이면 우리 것으로 세지 않음)
-        leaf.setPinned(true);
-        this.lockedLeaves.add(leaf);
-    }
-
-    private unlock(leaf: WorkspaceLeaf) {
-        if (!this.lockedLeaves.has(leaf)) return;
-        this.lockedLeaves.delete(leaf);
-        leaf.setPinned(false);
+    // 💡 "지금 탭"이 잠긴 그룹 탭인지 (옵시디언이 새 탭 없이 열려 할 때 바꿔 치울 탭)
+    private currentTabIsLocked(workspace: Workspace): boolean {
+        if (!this.plugin.settings.lockGroupedTabs) return false;
+        const leaf = workspace.getMostRecentLeaf(workspace.rootSplit);
+        return !!leaf && this.plugin.leafGroupMap.has(leaf);
     }
 }

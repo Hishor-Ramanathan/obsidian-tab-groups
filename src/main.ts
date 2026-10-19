@@ -67,7 +67,6 @@ export default class TabGroupsPlugin extends Plugin {
             if (this.unloaded) return;
             this.applyGroupStyle();
             this.restoreTabsFromSettings(); // ✨ 탭 매핑 먼저 완벽하게 복구하고!
-            this.lock.adoptExisting();
             this.layout.setupObservers();   // 감시자 달고
             this.enforcePhysicalSorting();  // 화면 정렬!
         });
@@ -84,6 +83,7 @@ export default class TabGroupsPlugin extends Plugin {
             this.app.workspace.on('window-open', (win: WorkspaceWindow) => applyGroupStyle(win.doc, this.settings.groupStyle))
         );
 
+        this.lock.register();
         this.groupDrop.register();
         this.tabDrag.register();
         this.labels.register();
@@ -154,7 +154,6 @@ export default class TabGroupsPlugin extends Plugin {
     // 💡 탭 바를 다시 정리합니다. (여러 모듈이 그룹을 바꾼 뒤 부름. 실제 작업은 group-layout.ts)
     enforcePhysicalSorting(options: { trackMoves?: boolean } = {}) {
         this.layout.enforcePhysicalSorting(options);
-        this.lock.sync();
     }
 
     // 💡 그룹 표시 모양을 메인 창과 열린 팝업 창 모두에 적용합니다. (style이 null이면 걷어 냄)
@@ -220,7 +219,7 @@ export default class TabGroupsPlugin extends Plugin {
     onunload() {
         this.unloaded = true;
 
-        this.lock.releaseAll();
+        this.lock.release();
         this.tabDrag.unload();
         this.groupDrag.finish();
         this.layout.disconnectObservers();
